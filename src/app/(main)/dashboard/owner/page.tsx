@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { BILLBOARD_STATUS } from '@/lib/constants'
+import { MOCK_BILLBOARDS } from '@/lib/mock-data'
 import type { Billboard, Booking } from '@/types/database'
 import Link from 'next/link'
 import {
@@ -13,38 +13,63 @@ import {
   Loader2,
 } from 'lucide-react'
 
+const MOCK_BOOKINGS: (Booking & { billboards?: { title: string } })[] = [
+  {
+    id: 'bk-1',
+    billboard_id: 'bb-1',
+    advertiser_id: 'adv-1',
+    owner_id: 'owner-1',
+    start_date: '2026-05-01',
+    end_date: '2026-07-31',
+    months: 3,
+    monthly_price: 180000,
+    total_price: 540000,
+    platform_fee: 54000,
+    owner_revenue: 486000,
+    status: 'confirmed',
+    ad_industry: '科技業',
+    ad_purpose: '新品上市',
+    ecpay_trade_no: null,
+    ecpay_payment_date: null,
+    created_at: '2026-03-20',
+    updated_at: '2026-03-25',
+    billboards: { title: '忠孝東路四段 LED 電子牆' },
+  },
+  {
+    id: 'bk-2',
+    billboard_id: 'bb-2',
+    advertiser_id: 'adv-2',
+    owner_id: 'owner-1',
+    start_date: '2026-04-01',
+    end_date: '2026-09-30',
+    months: 6,
+    monthly_price: 250000,
+    total_price: 1500000,
+    platform_fee: 150000,
+    owner_revenue: 1350000,
+    status: 'inquiry',
+    ad_industry: '精品',
+    ad_purpose: '品牌形象',
+    ecpay_trade_no: null,
+    ecpay_payment_date: null,
+    created_at: '2026-03-28',
+    updated_at: '2026-03-28',
+    billboards: { title: '信義計畫區松仁路大型看板' },
+  },
+]
+
 export default function OwnerDashboard() {
   const [billboards, setBillboards] = useState<Billboard[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<(Booking & { billboards?: { title: string } })[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-
-      const [billboardRes, bookingRes] = await Promise.all([
-        supabase
-          .from('billboards')
-          .select('*')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('bookings')
-          .select('*, billboards(title)')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-      ])
-
-      if (billboardRes.data) setBillboards(billboardRes.data as Billboard[])
-      if (bookingRes.data) setBookings(bookingRes.data as Booking[])
+    const timer = setTimeout(() => {
+      setBillboards(MOCK_BILLBOARDS.filter((b) => b.owner_id === 'owner-1'))
+      setBookings(MOCK_BOOKINGS)
       setLoading(false)
-    }
-    load()
+    }, 300)
+    return () => clearTimeout(timer)
   }, [])
 
   if (loading) {
@@ -92,76 +117,62 @@ export default function OwnerDashboard() {
       {/* Billboards list */}
       <div className="bg-white border rounded-xl overflow-hidden mb-8">
         <div className="px-6 py-4 border-b font-semibold">我的看板</div>
-        {billboards.length === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-500">
-            還沒有上架看板
-          </div>
-        ) : (
-          <div className="divide-y">
-            {billboards.map((b) => (
-              <Link
-                key={b.id}
-                href={`/billboards/${b.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50"
-              >
-                <div>
-                  <div className="font-medium">{b.title}</div>
-                  <div className="text-sm text-gray-500">{b.address}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  {b.price_monthly && (
-                    <span className="text-sm font-medium">
-                      NT${b.price_monthly.toLocaleString()}/月
-                    </span>
-                  )}
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      b.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : b.status === 'rented'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {BILLBOARD_STATUS[b.status]}
+        <div className="divide-y">
+          {billboards.map((b) => (
+            <Link
+              key={b.id}
+              href={`/billboards/${b.id}`}
+              className="flex items-center justify-between px-6 py-4 hover:bg-gray-50"
+            >
+              <div>
+                <div className="font-medium">{b.title}</div>
+                <div className="text-sm text-gray-500">{b.address}</div>
+              </div>
+              <div className="flex items-center gap-4">
+                {b.price_monthly && (
+                  <span className="text-sm font-medium">
+                    NT${b.price_monthly.toLocaleString()}/月
                   </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                )}
+                <span
+                  className={`text-xs px-2 py-1 rounded ${
+                    b.status === 'active'
+                      ? 'bg-green-100 text-green-700'
+                      : b.status === 'rented'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {BILLBOARD_STATUS[b.status]}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Recent bookings */}
       <div className="bg-white border rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b font-semibold">最近詢價</div>
-        {bookings.length === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-500">
-            尚無詢價紀錄
-          </div>
-        ) : (
-          <div className="divide-y">
-            {bookings.map((booking) => (
-              <Link
-                key={booking.id}
-                href={`/bookings/${booking.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50"
-              >
-                <div>
-                  <div className="font-medium">
-                    {(booking as Booking & { billboards?: { title: string } }).billboards?.title}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {booking.start_date} ~ {booking.end_date}
-                  </div>
+        <div className="divide-y">
+          {bookings.map((booking) => (
+            <Link
+              key={booking.id}
+              href={`/bookings/${booking.id}`}
+              className="flex items-center justify-between px-6 py-4 hover:bg-gray-50"
+            >
+              <div>
+                <div className="font-medium">{booking.billboards?.title}</div>
+                <div className="text-sm text-gray-500">
+                  {booking.start_date} ~ {booking.end_date}
                 </div>
-                <div className="text-sm">
-                  NT${booking.total_price.toLocaleString()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+              </div>
+              <div className="text-sm">
+                NT${booking.total_price.toLocaleString()}
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   )

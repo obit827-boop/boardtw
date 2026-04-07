@@ -1,5 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+'use client'
+
+import { useParams } from 'next/navigation'
+import { getMockBillboard, getMockEffects, MOCK_PHOTOS } from '@/lib/mock-data'
 import { BILLBOARD_TYPES, FACING_LABELS, BOOKING_STATUS } from '@/lib/constants'
 import {
   MapPin,
@@ -13,40 +15,32 @@ import {
   ChevronLeft,
 } from 'lucide-react'
 import Link from 'next/link'
-import type { Billboard, BillboardPhoto } from '@/types/database'
 
-export default async function BillboardDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const supabase = await createClient()
+export default function BillboardDetailPage() {
+  const { id } = useParams<{ id: string }>()
 
-  const { data: billboard } = await supabase
-    .from('billboards')
-    .select('*, billboard_photos(*), traffic_data(*)')
-    .eq('id', id)
-    .single()
+  const billboard = getMockBillboard(id)
 
-  if (!billboard) notFound()
-
-  const b = billboard as Billboard & {
-    billboard_photos: BillboardPhoto[]
-    traffic_data: Array<{ estimated_daily_impressions: number | null }>
+  if (!billboard) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <h1 className="text-2xl font-bold mb-2">找不到看板</h1>
+        <p className="text-gray-500 mb-6">此看板不存在或已下架</p>
+        <Link
+          href="/billboards"
+          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          返回搜尋
+        </Link>
+      </div>
+    )
   }
 
-  const photos = b.billboard_photos || []
+  const b = billboard
+  const photos = MOCK_PHOTOS[id] || []
   const primaryPhoto = photos.find((p) => p.is_primary) || photos[0]
-  const trafficData = b.traffic_data?.[0]
-
-  // Fetch effect reports
-  const { data: effects } = await supabase
-    .from('effect_reports')
-    .select('*')
-    .eq('billboard_id', id)
-    .order('created_at', { ascending: false })
-    .limit(5)
+  const effects = getMockEffects(id)
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -151,16 +145,11 @@ export default async function BillboardDetailPage({
                   人流評分 {b.foot_traffic_score}/100
                 </div>
               )}
-              {trafficData?.estimated_daily_impressions && (
-                <div className="font-medium text-blue-700">
-                  預估日曝光 {trafficData.estimated_daily_impressions.toLocaleString()} 次
-                </div>
-              )}
             </div>
           </div>
 
           {/* Effect reports */}
-          {effects && effects.length > 0 && (
+          {effects.length > 0 && (
             <div className="space-y-4">
               <h2 className="font-semibold">廣告主評價</h2>
               {effects.map((effect) => (

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { MOCK_BILLBOARDS } from '@/lib/mock-data'
 import BillboardCard from '@/components/billboard/BillboardCard'
 import BillboardFilters, { DEFAULT_FILTERS, type BillboardFilterValues } from '@/components/billboard/BillboardFilters'
 import type { Billboard } from '@/types/database'
@@ -12,25 +12,21 @@ export default function BillboardsPage() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<BillboardFilterValues>(DEFAULT_FILTERS)
 
-  const fetchBillboards = useCallback(async () => {
+  const fetchBillboards = useCallback(() => {
     setLoading(true)
-    const supabase = createClient()
-    let query = supabase
-      .from('billboards')
-      .select('*, billboard_photos(*)')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+    setTimeout(() => {
+      let filtered = MOCK_BILLBOARDS.filter((b) => b.status === 'active')
 
-    if (filters.city) query = query.eq('city', filters.city)
-    if (filters.type) query = query.eq('type', filters.type)
-    if (filters.priceMin) query = query.gte('price_monthly', parseInt(filters.priceMin))
-    if (filters.priceMax) query = query.lte('price_monthly', parseInt(filters.priceMax))
-    if (filters.hasLighting) query = query.eq('has_lighting', true)
-    if (filters.isDigital) query = query.eq('is_digital', true)
+      if (filters.city) filtered = filtered.filter((b) => b.city === filters.city)
+      if (filters.type) filtered = filtered.filter((b) => b.type === filters.type)
+      if (filters.priceMin) filtered = filtered.filter((b) => b.price_monthly != null && b.price_monthly >= parseInt(filters.priceMin))
+      if (filters.priceMax) filtered = filtered.filter((b) => b.price_monthly != null && b.price_monthly <= parseInt(filters.priceMax))
+      if (filters.hasLighting) filtered = filtered.filter((b) => b.has_lighting === true)
+      if (filters.isDigital) filtered = filtered.filter((b) => b.is_digital === true)
 
-    const { data } = await query.limit(50)
-    if (data) setBillboards(data as Billboard[])
-    setLoading(false)
+      setBillboards(filtered)
+      setLoading(false)
+    }, 300)
   }, [filters])
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { MOCK_BILLBOARDS } from '@/lib/mock-data'
 import MapView from '@/components/map/MapView'
 import BillboardCard from '@/components/billboard/BillboardCard'
 import type { Billboard } from '@/types/database'
@@ -13,37 +13,37 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true)
   const [showList, setShowList] = useState(false)
 
-  const fetchBillboards = useCallback(async (bounds?: {
+  const filterByBounds = useCallback((bounds?: {
     north: number
     south: number
     east: number
     west: number
   }) => {
     setLoading(true)
-    const supabase = createClient()
-    let query = supabase
-      .from('billboards')
-      .select('*, billboard_photos(*)')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(100)
+    let filtered = MOCK_BILLBOARDS.filter((b) => b.status === 'active')
 
     if (bounds) {
-      query = query
-        .gte('lat', bounds.south)
-        .lte('lat', bounds.north)
-        .gte('lng', bounds.west)
-        .lte('lng', bounds.east)
+      filtered = filtered.filter(
+        (b) =>
+          b.lat != null &&
+          b.lng != null &&
+          b.lat >= bounds.south &&
+          b.lat <= bounds.north &&
+          b.lng >= bounds.west &&
+          b.lng <= bounds.east
+      )
     }
 
-    const { data } = await query
-    if (data) setBillboards(data as Billboard[])
+    setBillboards(filtered)
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchBillboards()
-  }, [fetchBillboards])
+    // Initial load: show all active billboards
+    const active = MOCK_BILLBOARDS.filter((b) => b.status === 'active')
+    setBillboards(active)
+    setLoading(false)
+  }, [])
 
   const selectedBillboard = billboards.find((b) => b.id === selectedId)
 
@@ -76,7 +76,7 @@ export default function MapPage() {
         <MapView
           billboards={billboards}
           selectedId={selectedId}
-          onBoundsChange={fetchBillboards}
+          onBoundsChange={filterByBounds}
         />
       </div>
 
